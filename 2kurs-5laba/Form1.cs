@@ -12,6 +12,7 @@ namespace _2kurs_5laba {
     private const double DefaultPrecisionValue = 1e-4;
     private const double MinimumAllowedPrecisionValue = 1e-12;
     private const double ChartPaddingFactorValue = 0.15;
+    private const double DerivativeStepValue = 1e-5;
 
     private const string DefaultFormulaText = "x^2 - 4*x + 3";
     private const string ResultNumberFormat = "G10";
@@ -32,12 +33,14 @@ namespace _2kurs_5laba {
     private const int TrajectoryRadiusValue = 3;
     private const int AxisLineWidthValue = 1;
     private const int IntervalLineWidthValue = 2;
+    private const int TangentLineWidthValue = 2;
     private const int LabelFontSizeValue = 9;
     private const int TickFontSizeValue = 8;
     private const int AxisLabelOffsetValue = 5;
     private const int IntervalLabelOffsetValue = 10;
     private const int TickMarkLengthValue = 4;
     private const float IntervalDashPatternValue = 4f;
+    private const float TangentDashPatternValue = 5f;
     private const float ResultLabelFontSizeValue = 10f;
     private const float FullPercentSizeValue = 100f;
 
@@ -333,6 +336,8 @@ namespace _2kurs_5laba {
         using (Pen gridPen = new Pen(Color.FromArgb(230, 230, 230), 1))
         using (Pen intervalPen = new Pen(Color.SeaGreen, IntervalLineWidthValue)
         { DashPattern = new float[] { IntervalDashPatternValue, IntervalDashPatternValue } })
+        using (Pen tangentPen = new Pen(Color.Red, TangentLineWidthValue)
+        { DashPattern = new float[] { TangentDashPatternValue, TangentDashPatternValue } })
         using (Pen functionPen = new Pen(Color.SteelBlue, 2))
         using (Brush pointBrush = new SolidBrush(Color.Crimson))
         using (Brush trajectoryBrush = new SolidBrush(Color.Orange))
@@ -428,6 +433,17 @@ namespace _2kurs_5laba {
             catch { previousPoint = null; }
           }
 
+          double currentXPoint = currentTrajectory[currentStepIndex];
+          double currentYPoint = targetFunction(currentXPoint);
+          double derivative = CalculateDerivative(targetFunction, currentXPoint);
+
+          double tangentYAtMinX = currentYPoint + derivative * (minX - currentXPoint);
+          double tangentYAtMaxX = currentYPoint + derivative * (maxX - currentXPoint);
+
+          PointF tangentStart = toPixel(minX, tangentYAtMinX);
+          PointF tangentEnd = toPixel(maxX, tangentYAtMaxX);
+          graphics.DrawLine(tangentPen, tangentStart, tangentEnd);
+
           for (int stepIndex = 0; stepIndex < currentTrajectory.Count; ++stepIndex)
           {
             double stepXValue = currentTrajectory[stepIndex];
@@ -457,6 +473,11 @@ namespace _2kurs_5laba {
       functionPictureBox.Image = bitmap;
     }
 
+    private static double CalculateDerivative(Func<double, double> function, double point)
+    {
+      return (function(point + DerivativeStepValue) - function(point - DerivativeStepValue)) / (2.0 * DerivativeStepValue);
+    }
+
     private static double CalculateNiceStep(double range, double targetStepCount)
     {
       if (range <= 0) return 1.0;
@@ -480,11 +501,13 @@ namespace _2kurs_5laba {
 
       double currentPoint = currentTrajectory[currentStepIndex];
       double currentValue = currentTargetFunction(currentPoint);
+      int totalSteps = currentTrajectory.Count - 1;
 
-      string finalMessage = currentStepIndex == currentTrajectory.Count - 1 ? "\n" + currentMessage : "";
+      string finalMessage = currentStepIndex == totalSteps ? "\n" + currentMessage : "";
 
       resultLabel.Text =
           $"Метод Ньютона:\n" +
+          $"Пройдено шагов: {currentStepIndex} из {totalSteps}\n" +
           $"x* = {currentPoint.ToString(ResultNumberFormat, CultureInfo.InvariantCulture)}\n" +
           $"f(x*) = {currentValue.ToString(ResultNumberFormat, CultureInfo.InvariantCulture)}" +
           finalMessage;
